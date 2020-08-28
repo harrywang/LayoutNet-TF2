@@ -18,7 +18,7 @@ class EmbeddingSemvec(keras.Model):
         self.fc = Dense(32, activation=activation,
                         kernel_initializer=initializer)
 
-    def call(self, inputs, training=None):
+    def call(self, inputs, is_training=None):
         category = tf.concat([inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6],
                               inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6]], 1)
         textratio = tf.concat([inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13],
@@ -47,7 +47,7 @@ class EmbeddingImg(keras.Model):
         self.img_fc3 = Dense(128, activation=activation,
                              kernel_initializer=initializer)
 
-    def call(self, inputs, training=None):
+    def call(self, inputs, is_training=None):
         x = tf.reduce_mean(inputs, [1, 2])
         x = self.img_fc1(x)
         x = self.img_fc2(x)
@@ -68,7 +68,7 @@ class EmbeddingTxt(keras.Model):
         self.txt_fc3 = Dense(128, activation=activation,
                              kernel_initializer=initializer)
 
-    def call(self, inputs, training=None):
+    def call(self, inputs, is_training=None):
         x = self.txt_fc1(inputs)
         x = self.txt_fc2(x)
         x = self.txt_fc3(x)
@@ -86,7 +86,8 @@ class EmbeddingFusion(keras.Model):
         self.fusion_fc2 = Dense(
             128, activation=activation, kernel_initializer=initializer)
 
-    def call(self, inputs, training=None):
+    def call(self, input1, input2, input3, is_training=None):
+        inputs = tf.concat([input1, input2, input3], 1)
         x = self.fusion_fc1(inputs)
         x = self.fusion_fc2(x)
 
@@ -232,3 +233,55 @@ class Encoder(keras.Model):
         x_2 = self.conv_4_2(x)
 
         return x_1, x_2
+
+
+class LayoutNet(keras.Model):
+    def __init__(self, config):
+        super(LayoutNet).__init__()
+        self.embeddingSemvec = EmbeddingSemvec()
+        self.embeddingImg = EmbeddingImg()
+        self.embeddingTxt = EmbeddingTxt()
+
+        self.embeddingFusion = EmbeddingFusion()
+
+        self.encoder = Encoder()
+        self.generator = Gen()
+        self.discriminator = Disc()
+
+        self.config = config
+
+    def call(self, x, y, tr, ir, img, tex, z, is_training=True):
+        config = self.config
+
+        category = tf.one_hot(y, depth=config.y_dim)
+        textratio = tf.one_hot(tr, depth=config.tr_dim)
+        imgratio = tf.one_hot(ir, depth=config.ir_dim)
+        x_labeltmp = tf.concat([category, textratio, imgratio], 1)
+
+        var_label = self.embeddingSemvec(x_labeltmp, is_training)
+        img_fea = self.embeddingImg(img, is_training)
+        tex_fea = self.embeddingTxt(tex, is_training)
+
+        y_label = self.embeddingFusion(
+            var_label, img_fea, tex_fea, is_training)
+
+        ydis_label = tf.reshape(y_label, shape=[
+                                None, 1, 1, config.latent_dim]) * tf.ones([config.batch_size, 64, 64, config.latent_dim])
+
+        encoderdis_label = tf.reshape(y_label, shape=[
+                                      None, 1, 1, config.latent_dim]) * tf.ones([config.batch_size, 4, 4, config.latent_dim])
+
+        randomz = tf.random.normal([config.bath_size, config.z_dim])
+
+        # TODO: original repo distinguish training and testing
+        z_mean, z_log_sigma_sq = self.encoder(
+            x, is_training, y=encoderdis_label)
+        E = z_mean + tf.exp(z_log_sigma_sq) * randomz
+
+        G = self.generator(z, is_training, y=y_label)
+        G_recon = self.generator(E, is_training, y=y_label)
+
+        D_real = self.discriminator(x, is_training, y=ydis_label)
+        D_fake = self.discriminator(G, is_training, y=ydis_label, z=z)
+
+        return z_mean, z_log_sigma_sq, E, G, G_recon, D_real, D_fake
