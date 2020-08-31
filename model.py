@@ -8,23 +8,37 @@ class EmbeddingSemvec(keras.Model):
         super(EmbeddingSemvec, self).__init__()
         initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
         activation = tf.nn.relu
-        self.cat_fc = Dense(48, activation=activation,
+        self.cat_fc = Dense(48,
+                            activation=activation,
                             kernel_initializer=initializer)
-        self.txt_fc = Dense(48, activation=activation,
+        self.txt_fc = Dense(48,
+                            activation=activation,
                             kernel_initializer=initializer)
-        self.img_fc = Dense(48, activation=activation,
+        self.img_fc = Dense(48,
+                            activation=activation,
                             kernel_initializer=initializer)
 
-        self.fc = Dense(32, activation=activation,
+        self.fc = Dense(32,
+                        activation=activation,
                         kernel_initializer=initializer)
 
     def call(self, inputs, is_training=None):
-        category = tf.concat([inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6],
-                              inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6]], 1)
-        textratio = tf.concat([inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13],
-                               inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13]], 1)
-        imgratio = tf.concat([inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23],
-                              inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23]], 1)
+        category = tf.concat([
+            inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6],
+            inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6],
+            inputs[:, 0:6], inputs[:, 0:6]
+        ], 1)
+        textratio = tf.concat([
+            inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13],
+            inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13],
+            inputs[:, 6:13], inputs[:, 6:13]
+        ], 1)
+        imgratio = tf.concat([
+            inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23],
+            inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23],
+            inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23], inputs[:,
+                                                                         13:23]
+        ], 1)
 
         cat = self.cat_fc(category)
         txt = self.txt_fc(textratio)
@@ -32,7 +46,7 @@ class EmbeddingSemvec(keras.Model):
 
         x = tf.concat([cat, txt, img], 1)
 
-        return self.net(x)
+        return self.fc(x)
 
 
 class EmbeddingImg(keras.Model):
@@ -40,11 +54,14 @@ class EmbeddingImg(keras.Model):
         super(EmbeddingImg, self).__init__()
         initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
         activation = tf.nn.relu
-        self.img_fc1 = Dense(512, activation=activation,
+        self.img_fc1 = Dense(512,
+                             activation=activation,
                              kernel_initializer=initializer)
-        self.img_fc2 = Dense(256, activation=activation,
+        self.img_fc2 = Dense(256,
+                             activation=activation,
                              kernel_initializer=initializer)
-        self.img_fc3 = Dense(128, activation=activation,
+        self.img_fc3 = Dense(128,
+                             activation=activation,
                              kernel_initializer=initializer)
 
     def call(self, inputs, is_training=None):
@@ -58,14 +75,17 @@ class EmbeddingImg(keras.Model):
 
 class EmbeddingTxt(keras.Model):
     def __init__(self):
-        super(EmbeddingTxt).__init__()
+        super(EmbeddingTxt, self).__init__()
         initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
         activation = tf.nn.relu
-        self.txt_fc1 = Dense(256, activation=activation,
+        self.txt_fc1 = Dense(256,
+                             activation=activation,
                              kernel_initializer=initializer)
-        self.txt_fc2 = Dense(256, activation=activation,
+        self.txt_fc2 = Dense(256,
+                             activation=activation,
                              kernel_initializer=initializer)
-        self.txt_fc3 = Dense(128, activation=activation,
+        self.txt_fc3 = Dense(128,
+                             activation=activation,
                              kernel_initializer=initializer)
 
     def call(self, inputs, is_training=None):
@@ -78,13 +98,15 @@ class EmbeddingTxt(keras.Model):
 
 class EmbeddingFusion(keras.Model):
     def __init__(self):
-        super(EmbeddingFusion).__init__()
+        super(EmbeddingFusion, self).__init__()
         initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
         activation = tf.nn.relu
-        self.fusion_fc1 = Dense(
-            256, activation=activation, kernel_initializer=initializer)
-        self.fusion_fc2 = Dense(
-            128, activation=activation, kernel_initializer=initializer)
+        self.fusion_fc1 = Dense(256,
+                                activation=activation,
+                                kernel_initializer=initializer)
+        self.fusion_fc2 = Dense(128,
+                                activation=activation,
+                                kernel_initializer=initializer)
 
     def call(self, input1, input2, input3, is_training=None):
         inputs = tf.concat([input1, input2, input3], 1)
@@ -96,29 +118,49 @@ class EmbeddingFusion(keras.Model):
 
 class Gen(keras.Model):
     def __init__(self):
-        super(Gen).__init__()
+        super(Gen, self).__init__()
         initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
         activation = tf.nn.relu
         kernel_size = 5
         strides = (2, 2)
         padding = 'same'
 
-        self.projection = Dense(
-            4 * 4 * 512, activation=activation, kernel_initializer=initializer)
-        self.reshape = Reshape(4 * 4 * 512)
+        self.projection = Dense(4 * 4 * 512,
+                                activation=activation,
+                                kernel_initializer=initializer)
+        self.reshape = Reshape((4, 4, 512))
         self.bn = BatchNormalization()
 
-        self.conv_tp1 = Conv2DTranspose(
-            256, kernel_size=kernel_size, strides=strides, padding=padding, activation=activation, kernel_initializer=initializer)
-        self.conv_tp2 = Conv2DTranspose(
-            128, kernel_size=kernel_size, strides=strides, padding=padding, activation=activation, kernel_initializer=initializer)
-        self.conv_tp3 = Conv2DTranspose(
-            64, kernel_size=kernel_size, strides=strides, padding=padding, activation=activation, kernel_initializer=initializer)
-        self.conv_tp4 = Conv2DTranspose(
-            3, kernel_size=kernel_size, strides=strides, padding=padding, activation=tf.nn.tanh, kernel_initializer=initializer)
+        self.conv_tp1 = Conv2DTranspose(256,
+                                        kernel_size=kernel_size,
+                                        strides=strides,
+                                        padding=padding,
+                                        activation=activation,
+                                        kernel_initializer=initializer)
+        self.conv_tp2 = Conv2DTranspose(128,
+                                        kernel_size=kernel_size,
+                                        strides=strides,
+                                        padding=padding,
+                                        activation=activation,
+                                        kernel_initializer=initializer)
+        self.conv_tp3 = Conv2DTranspose(64,
+                                        kernel_size=kernel_size,
+                                        strides=strides,
+                                        padding=padding,
+                                        activation=activation,
+                                        kernel_initializer=initializer)
+        self.conv_tp4 = Conv2DTranspose(3,
+                                        kernel_size=kernel_size,
+                                        strides=strides,
+                                        padding=padding,
+                                        activation=tf.nn.tanh,
+                                        kernel_initializer=initializer)
 
     def call(self, z, is_training, y=None):
-        inputs = tf.concat((z, y), 1) if y else z
+        if y is not None:
+            inputs = tf.concat((z, y), 1)
+        else:
+            inputs = z
         x = self.projection(inputs)
         x = self.reshape(x)
         x = self.bn(x)
@@ -133,36 +175,58 @@ class Gen(keras.Model):
 
 class Disc(keras.Model):
     def __init__(self):
-        super(Disc).__init__()
+        super(Disc, self).__init__()
         initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
         activation = tf.nn.leaky_relu
         kernel_size = 5
         strides = (2, 2)
         padding = 'same'
 
-        self.conv_0 = Conv2D(64, kernel_size=kernel_size, strides=strides,
-                             padding=padding, activation=activation, kernel_initializer=initializer)
+        self.conv_0 = Conv2D(64,
+                             kernel_size=kernel_size,
+                             strides=strides,
+                             padding=padding,
+                             activation=activation,
+                             kernel_initializer=initializer)
 
-        self.conv_1 = Conv2D(128, kernel_size=kernel_size, strides=strides,
-                             padding=padding, activation=activation, kernel_initializer=initializer)
+        self.conv_1 = Conv2D(128,
+                             kernel_size=kernel_size,
+                             strides=strides,
+                             padding=padding,
+                             activation=activation,
+                             kernel_initializer=initializer)
         self.bn_1 = BatchNormalization()
 
-        self.conv_2 = Conv2D(256, kernel_size=kernel_size, strides=strides,
-                             padding=padding, activation=activation, kernel_initializer=initializer)
+        self.conv_2 = Conv2D(256,
+                             kernel_size=kernel_size,
+                             strides=strides,
+                             padding=padding,
+                             activation=activation,
+                             kernel_initializer=initializer)
         self.bn_2 = BatchNormalization()
 
-        self.conv_3 = Conv2D(512, kernel_size=kernel_size, strides=strides,
-                             padding=padding, activation=activation, kernel_initializer=initializer)
+        self.conv_3 = Conv2D(512,
+                             kernel_size=kernel_size,
+                             strides=strides,
+                             padding=padding,
+                             activation=activation,
+                             kernel_initializer=initializer)
         self.bn_3 = BatchNormalization()
 
-        self.conv_4 = Conv2D(128, kernel_size=4,
-                             strides=(1, 1), padding='valid')
+        self.conv_4 = Conv2D(128,
+                             kernel_size=4,
+                             strides=(1, 1),
+                             padding='valid')
 
-        self.fc = Dense(1, activation=tf.nn.tanh,
+        self.fc = Dense(1,
+                        activation=tf.nn.tanh,
                         kernel_initializer=initializer)
 
     def call(self, inputs, is_training, y, z):
-        x = tf.concat([inputs, y], 3) if y else inputs
+        if y is not None:
+            x = tf.concat([inputs, y], 3)
+        else:
+            x = inputs
 
         x = self.conv_0(x)
         x = self.conv_1(x)
@@ -188,32 +252,54 @@ class Disc(keras.Model):
 
 class Encoder(keras.Model):
     def __init__(self):
-        super(Encoder).__init__()
+        super(Encoder, self).__init__()
         initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
         activation = tf.nn.leaky_relu
         kernel_size = 5
         strides = (2, 2)
         padding = 'same'
 
-        self.conv_0 = Conv2D(64, kernel_size=kernel_size, strides=strides,
-                             padding=padding, activation=activation, kernel_initializer=initializer)
+        self.conv_0 = Conv2D(64,
+                             kernel_size=kernel_size,
+                             strides=strides,
+                             padding=padding,
+                             activation=activation,
+                             kernel_initializer=initializer)
 
-        self.conv_1 = Conv2D(128, kernel_size=kernel_size, strides=strides,
-                             padding=padding, activation=activation, kernel_initializer=initializer)
+        self.conv_1 = Conv2D(128,
+                             kernel_size=kernel_size,
+                             strides=strides,
+                             padding=padding,
+                             activation=activation,
+                             kernel_initializer=initializer)
         self.bn_1 = BatchNormalization()
 
-        self.conv_2 = Conv2D(256, kernel_size=kernel_size, strides=strides,
-                             padding=padding, activation=activation, kernel_initializer=initializer)
+        self.conv_2 = Conv2D(256,
+                             kernel_size=kernel_size,
+                             strides=strides,
+                             padding=padding,
+                             activation=activation,
+                             kernel_initializer=initializer)
         self.bn_2 = BatchNormalization()
 
-        self.conv_3 = Conv2D(512, kernel_size=kernel_size, strides=strides,
-                             padding=padding, activation=activation, kernel_initializer=initializer)
+        self.conv_3 = Conv2D(512,
+                             kernel_size=kernel_size,
+                             strides=strides,
+                             padding=padding,
+                             activation=activation,
+                             kernel_initializer=initializer)
         self.bn_3 = BatchNormalization()
 
-        self.conv_4_1 = Conv2D(128, kernel_size=4, strides=(
-            1, 1), padding='valid', activation=None)
-        self.conv_4_2 = Conv2D(128, kernel_size=4, strides=(
-            1, 1), padding='valid', activation=None)
+        self.conv_4_1 = Conv2D(128,
+                               kernel_size=4,
+                               strides=(1, 1),
+                               padding='valid',
+                               activation=None)
+        self.conv_4_2 = Conv2D(128,
+                               kernel_size=4,
+                               strides=(1, 1),
+                               padding='valid',
+                               activation=None)
 
     def call(self, inputs, is_training, y=None):
         x = self.conv_0(inputs)
@@ -227,17 +313,21 @@ class Encoder(keras.Model):
         x = self.conv_3(x)
         x = self.bn_3(x)
 
-        x = tf.concat([x, y], 3) if x else x
+        if y is not None:
+            x = tf.concat([x, y], 3)
 
         x_1 = self.conv_4_1(x)
         x_2 = self.conv_4_2(x)
+
+        x_1 = tf.squeeze(x_1, [1, 2])
+        x_2 = tf.squeeze(x_2, [1, 2])
 
         return x_1, x_2
 
 
 class LayoutNet(keras.Model):
     def __init__(self, config):
-        super(LayoutNet).__init__()
+        super(LayoutNet, self).__init__()
         self.embeddingSemvec = EmbeddingSemvec()
         self.embeddingImg = EmbeddingImg()
         self.embeddingTxt = EmbeddingTxt()
@@ -262,26 +352,28 @@ class LayoutNet(keras.Model):
         img_fea = self.embeddingImg(img, is_training)
         tex_fea = self.embeddingTxt(tex, is_training)
 
-        y_label = self.embeddingFusion(
-            var_label, img_fea, tex_fea, is_training)
+        y_label = self.embeddingFusion(var_label, img_fea, tex_fea,
+                                       is_training)
 
-        ydis_label = tf.reshape(y_label, shape=[
-                                None, 1, 1, config.latent_dim]) * tf.ones([config.batch_size, 64, 64, config.latent_dim])
+        ydis_label = tf.reshape(
+            y_label, shape=(-1, 1, 1, config.latent_dim)) * tf.ones(
+                [config.batch_size, 64, 64, config.latent_dim])
 
-        encoderdis_label = tf.reshape(y_label, shape=[
-                                      None, 1, 1, config.latent_dim]) * tf.ones([config.batch_size, 4, 4, config.latent_dim])
+        encoderdis_label = tf.reshape(
+            y_label, shape=(-1, 1, 1, config.latent_dim)) * tf.ones(
+                [config.batch_size, 4, 4, config.latent_dim])
 
-        randomz = tf.random.normal([config.bath_size, config.z_dim])
+        randomz = tf.random.normal([config.batch_size, config.z_dim])
 
-        # TODO: original repo distinguish training and testing
-        z_mean, z_log_sigma_sq = self.encoder(
-            x, is_training, y=encoderdis_label)
+        z_mean, z_log_sigma_sq = self.encoder(x,
+                                              is_training,
+                                              y=encoderdis_label)
         E = z_mean + tf.exp(z_log_sigma_sq) * randomz
 
         G = self.generator(z, is_training, y=y_label)
         G_recon = self.generator(E, is_training, y=y_label)
 
-        D_real = self.discriminator(x, is_training, y=ydis_label)
+        D_real = self.discriminator(x, is_training, y=ydis_label, z=z)
         D_fake = self.discriminator(G, is_training, y=ydis_label, z=z)
 
         return z_mean, z_log_sigma_sq, E, G, G_recon, D_real, D_fake

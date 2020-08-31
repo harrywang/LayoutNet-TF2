@@ -1,4 +1,5 @@
 import os
+from numpy.core.fromnumeric import resize
 import scipy.misc
 from PIL import Image
 import time
@@ -10,14 +11,27 @@ import config
 
 # decode function for dataset
 def _decode_tfrecords(example_string):
-    features = tf.io.parse_single_example(example_string, features={
-        "label": tf.io.FixedLenFeature([], tf.int64),
-        "textRatio": tf.io.FixedLenFeature([], tf.int64),
-        "imgRatio": tf.io.FixedLenFeature([], tf.int64),
-        'visualfea': tf.io.FixedLenFeature([], tf.string),
-        'textualfea': tf.io.FixedLenFeature([], tf.string),
-        "img_raw": tf.io.FixedLenFeature([], tf.string)
-    })
+    features = tf.io.parse_single_example(example_string,
+                                          features={
+                                              "label":
+                                              tf.io.FixedLenFeature([],
+                                                                    tf.int64),
+                                              "textRatio":
+                                              tf.io.FixedLenFeature([],
+                                                                    tf.int64),
+                                              "imgRatio":
+                                              tf.io.FixedLenFeature([],
+                                                                    tf.int64),
+                                              'visualfea':
+                                              tf.io.FixedLenFeature([],
+                                                                    tf.string),
+                                              'textualfea':
+                                              tf.io.FixedLenFeature([],
+                                                                    tf.string),
+                                              "img_raw":
+                                              tf.io.FixedLenFeature([],
+                                                                    tf.string)
+                                          })
 
     image = tf.io.decode_raw(features['img_raw'], tf.uint8)
     image = tf.reshape(image, [60, 45, 3])
@@ -42,16 +56,19 @@ def _decode_tfrecords(example_string):
 
 # prepare dataset
 dataset = tf.data.TFRecordDataset(config.filenamequeue)
-dataset.map(_decode_tfrecords)
+dataset = dataset.map(_decode_tfrecords)
+
 # TODO: change the buffer_size
-dataset.shuffle(buffer_size=1024, reshuffle_each_iteration=True)
-dataset.batch(batch_size=config.batch_size)
+dataset = dataset.shuffle(buffer_size=1024, reshuffle_each_iteration=True)
+dataset = dataset.repeat()
+dataset = dataset.batch(batch_size=config.batch_size)
+dataset = dataset.as_numpy_iterator()
 
 # create model
 layoutnet = LayoutNet(config)
 
-# define loss and opt
 
+# define loss and opt
 def discriminator_loss(D_real, D_fake):
     loss_D_real = tf.reduce_mean(tf.nn.l2_loss(D_real - tf.ones_like(D_real)))
     loss_D_fake = tf.reduce_mean(tf.nn.l2_loss(D_fake - tf.zeros_like(D_fake)))
@@ -64,12 +81,13 @@ def discriminator_loss(D_real, D_fake):
 def generator_loss(x, z_log_sigma_sq, z_mean, D_fake, G_recon):
     loss_Gls = tf.reduce_mean(tf.nn.l2_loss(D_fake - tf.ones_like(D_fake)))
 
-    kl_div = -0.5 * tf.reduce_sum(1 + 2 * z_log_sigma_sq -
-                                  tf.square(z_mean) - tf.exp(2 * z_log_sigma_sq), 1)
+    kl_div = -0.5 * tf.reduce_sum(
+        1 + 2 * z_log_sigma_sq - tf.square(z_mean) -
+        tf.exp(2 * z_log_sigma_sq), 1)
 
     orig_input = tf.reshape(x, [config.batch_size, 64 * 64 * 3])
     orig_input = (orig_input + 1) / 2.
-    generated_flat = tf.reshpae(G_recon, [config.batch_size, 64 * 64 * 3])
+    generated_flat = tf.reshape(G_recon, [config.batch_size, 64 * 64 * 3])
     generated_flat = (generated_flat + 1) / 2.
 
     recon_loss = tf.reduce_sum(tf.pow(generated_flat - orig_input, 2), 1)
@@ -78,8 +96,8 @@ def generator_loss(x, z_log_sigma_sq, z_mean, D_fake, G_recon):
     # compared to encoder_loss
     # generator_loss don't consider kl_div anymore
     # why?
-    recon_loss = tf.reduce_mean(recon_loss) / 64 / 64 /3
-    
+    recon_loss = tf.reduce_mean(recon_loss) / 64 / 64 / 3
+
     loss_G = loss_Gls + recon_loss
 
     return loss_G
@@ -87,26 +105,30 @@ def generator_loss(x, z_log_sigma_sq, z_mean, D_fake, G_recon):
 
 def encoder_loss(x, z_log_sigma_sq, z_mean, G_recon):
     # TODO: the dimension is hardcoded, it's not good
-    kl_div = -0.5 * tf.reduce_sum(1 + 2 * z_log_sigma_sq -
-                                  tf.square(z_mean) - tf.exp(2 * z_log_sigma_sq), 1)
+    kl_div = -0.5 * tf.reduce_sum(
+        1 + 2 * z_log_sigma_sq - tf.square(z_mean) -
+        tf.exp(2 * z_log_sigma_sq), 1)
 
     orig_input = tf.reshape(x, [config.batch_size, 64 * 64 * 3])
     orig_input = (orig_input + 1) / 2.
-    generated_flat = tf.reshpae(G_recon, [config.batch_size, 64 * 64 * 3])
+    generated_flat = tf.reshape(G_recon, [config.batch_size, 64 * 64 * 3])
     generated_flat = (generated_flat + 1) / 2.
 
     recon_loss = tf.reduce_sum(tf.pow(generated_flat - orig_input, 2), 1)
 
-    loss_E = tf.reduce_sum(kl_div, recon_loss) / 64 / 64 / 3
+    loss_E = tf.reduce_mean(kl_div + recon_loss) / 64 / 64 / 3
 
     return loss_E
 
 
-generator_optimizer = tf.keras.optimizers.Adam(learning_rate=config.lr, beta_1=config.beta1).minimize
-discriminator_optimizer = tf.keras.optimizers.Adam(learning_rate=config.lr, beta_1=config.beta1)
-encoder_optimizer = tf.keras.optimizers.Adam(learning_rate=config.lr, beta_1=config.beta1)
+generator_optimizer = tf.keras.optimizers.Adam(learning_rate=config.lr,
+                                               beta_1=config.beta1)
+discriminator_optimizer = tf.keras.optimizers.Adam(learning_rate=config.lr,
+                                                   beta_1=config.beta1)
+encoder_optimizer = tf.keras.optimizers.Adam(learning_rate=config.lr,
+                                             beta_1=config.beta1)
 
-# save checkpoints
+# define checkpoint saver
 
 checkpoint_dir = config.checkpoint_dir
 checkpoint_prefix = config.checkpoint_basename
@@ -118,16 +140,209 @@ checkpoint = tf.train.Checkpoint(
     discriminator=layoutnet.discriminator,
     encoder=layoutnet.encoder)
 
-
 # define the training loop
 
 num_examples_to_generate = 16
 # from TF2.3 DCGAN documents:
-## We will reuse this seed overtime (so it's easier)
-## to visualize progress in the animated GIF)
+# We will reuse this seed overtime (so it's easier)
+# to visualize progress in the animated GIF)
 seed = tf.random.normal([num_examples_to_generate, config.z_dim])
 
 
-@tf.function
-def train_step():
-    pass
+def train_step(z,
+               is_training=True,
+               discriminator=True,
+               generator=True,
+               encoder=True):
+    resized_image, label, textRatio, imgRatio, visualfea, textualfea = \
+    dataset.next()
+    return train_func(z, resized_image, label, textRatio, imgRatio, visualfea,
+                      textualfea, is_training, discriminator, generator,
+                      encoder)
+
+
+# @tf.function
+def train_func(z,
+               resized_image,
+               label,
+               textRatio,
+               imgRatio,
+               visualfea,
+               textualfea,
+               is_training=True,
+               discriminator=True,
+               generator=True,
+               encoder=True):
+
+    with tf.GradientTape() as disc_tape, tf.GradientTape(
+    ) as gen_tape, tf.GradientTape() as encoder_tape:
+        z_mean, z_log_sigma_sq, E, G, G_recon, D_real, D_fake = layoutnet(
+            resized_image,
+            label,
+            textRatio,
+            imgRatio,
+            visualfea,
+            textualfea,
+            z,
+            is_training=is_training)
+        disc_loss = discriminator_loss(D_real, D_fake)
+        gen_loss = generator_loss(x=resized_image,
+                                  z_log_sigma_sq=z_log_sigma_sq,
+                                  z_mean=z_mean,
+                                  D_fake=D_fake,
+                                  G_recon=G_recon)
+        encod_loss = encoder_loss(x=resized_image,
+                                  z_log_sigma_sq=z_log_sigma_sq,
+                                  z_mean=z_mean,
+                                  G_recon=G_recon)
+
+        gradients_of_discriminator = disc_tape.gradient(
+            disc_loss, layoutnet.discriminator.trainable_variables)
+        gradients_of_generator = gen_tape.gradient(
+            gen_loss, layoutnet.generator.trainable_variables)
+        gradients_of_encoder = encoder_tape.gradient(
+            encod_loss, layoutnet.encoder.trainable_variables)
+
+        if is_training:
+            discriminator_variables = layoutnet.discriminator.trainable_variables
+            generator_variables = layoutnet.generator.trainable_variables
+            encoder_variables = layoutnet.encoder.trainable_variables
+
+            if discriminator:
+                discriminator_optimizer.apply_gradients(
+                    zip(gradients_of_discriminator, discriminator_variables))
+
+            if generator:
+                generator_optimizer.apply_gradients(
+                    zip(gradients_of_generator, generator_variables))
+
+            if encoder:
+                encoder_optimizer.apply_gradients(
+                    zip(gradients_of_encoder, encoder_variables))
+
+        return disc_loss, gen_loss, encod_loss
+
+
+def sample():
+    layout_path = './sample/layout'
+    img_fea_path = './sample/visfea'
+    txt_fea_path = './sample/texfea'
+    sem_vec_path = './sample/semvec'
+
+    f = open('./sample/imgSel_128.txt', 'r')
+    name = f.read()
+    name_list = name.split()
+
+    n_samples = len(name_list)
+
+    for i in range(n_samples):
+        name_tmp = name_list[i]
+
+        layout_name = os.path.join(layout_path, name_tmp)
+
+        file_name = name_tmp[0:-4] + '.npy'
+        img_fea_name = os.path.join(img_fea_path, file_name)
+        txt_fea_name = os.path.join(txt_fea_path, file_name)
+        sem_vec_name = os.path.join(sem_vec_path, file_name)
+
+        img = Image.open(layout_name)
+        rgb = np.array(img).reshape(1, 64, 64, 3)
+        rgb = rgb.astype(np.float32) * (1. / 127.5) - 1.
+        test_layout = np.concatenate(
+            (test_layout, rgb), axis=0) if (i > 0 and test_layout) else rgb
+
+        img_fea = np.load(img_fea_name)
+        img_fea = img_fea.reshape(1, 14, 14, 512)
+        test_img_fea = np.concatenate(
+            (test_img_fea,
+             img_fea), axis=0) if (i > 0 and test_img_fea) else img_fea
+
+        txt_fea = np.load(txt_fea_name)
+        txt_fea = txt_fea.reshape((1, 300))
+        test_txt_fea = np.concatenate(
+            (test_txt_fea,
+             txt_fea), axis=0) if (i > 0 and test_txt_fea) else txt_fea
+
+        convar = np.load(sem_vec_name)
+        category_input = np.eye(6)[int(convar[0, 0])].reshape([1, 6])
+        text_ratio_input = np.eye(7)[int(convar[0, 1])].reshape([1, 7])
+        img_ratio_input = np.eye(10)[int(convar[0, 2])].reshape([1, 10])
+
+        sem_vec = np.concatenate(
+            [category_input, text_ratio_input, img_ratio_input], 1)
+        sem_vec = sem_vec.astype(np.float32)
+        test_sem_vec = np.concatenate(
+            (test_sem_vec,
+             sem_vec), axis=0) if (i > 0 and test_sem_vec) else sem_vec
+
+    # start sampleing
+
+    random_z_val = np.load('./sample/noiseVector_128.npy')
+    z_mean, z_log_sigma_sq, E, G, G_recon, D_real, D_fake = layoutnet(
+        x=test_layout,
+        y=test_sem_vec,
+        tr=test_ratio_input,
+        ir=img_ratio_input,
+        img=img_fea,
+        tex=txt_fea,
+        z=random_z_val,
+        is_training=False)
+
+    im_name = os.path.join(config.sampledir, 'sample_%d.jpg' % (step + 1))
+    h, w = G.shape[1], G.shape[2]
+    merge_img = np.zeros((h * 16, w * 8, 3))
+    for idx, image in enumerate(G):
+        i = idx % 8
+        j = idx // 8
+        merge_img[j * h:j * h + h, i * w:i * w + w, :] = image
+    scipy.misc.imsave(im_name, merge_img)
+
+
+def train():
+    for step in range(config.max_steps):
+        t1 = time.time()
+
+        z = np.random.normal(0.0, 1.0, size=(config.batch_size,
+                                             config.z_dim)).astype(np.float32)
+
+        # train disc
+        disc_loss, gen_loss, encod_loss = train_step(z=z,
+                                                     discriminator=True,
+                                                     generator=False,
+                                                     encoder=False)
+
+        # train gen
+        disc_loss, gen_loss, encod_loss = train_step(z=z,
+                                                     discriminator=False,
+                                                     generator=True,
+                                                     encoder=False)
+
+        # train encoder
+        disc_loss, gen_loss, encod_loss = train_step(z=z,
+                                                     discriminator=False,
+                                                     generator=False,
+                                                     encoder=True)
+
+        # train all
+        while disc_loss < 1.:
+            disc_loss, gen_loss, encod_loss = train_step(z)
+
+        t2 = time.time()
+
+        if (step + 1) % config.summary_every_n_steps == 0:
+            disc_loss, gen_loss, encod_loss = train_step(z, is_training=False)
+            print("step {:5d},loss = (G: {:.8f}, D: {:.8f}), E: {:.8f}".format(
+                step, gen_loss, disc_loss, encod_loss))
+
+        if (step + 1) % config.sample_every_n_steps == 0:
+            eta = (t2 - t1) * (config.max_steps - step + 1)
+            print("Finished {}/{} step, ETA:{:.2f}s".format(
+                step + 1, config.max_steps, eta))
+
+            checkpoint.save(file_prefix=checkpoint_prefix)
+
+            # get and save samples
+            sample()
+
+
+train()
