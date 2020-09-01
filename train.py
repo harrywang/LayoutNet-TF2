@@ -1,6 +1,4 @@
 import os
-from numpy.core.fromnumeric import resize
-import scipy.misc
 from PIL import Image
 import time
 import numpy as np
@@ -130,8 +128,8 @@ encoder_optimizer = tf.keras.optimizers.Adam(learning_rate=config.lr,
 
 # define checkpoint saver
 
-checkpoint_dir = config.checkpoint_dir
-checkpoint_prefix = config.checkpoint_basename
+checkpoint_prefix = os.path.join(config.checkpoint_dir,
+                                 config.checkpoint_basename)
 checkpoint = tf.train.Checkpoint(
     generator_optimizer=generator_optimizer,
     discriminator_optimizer=discriminator_optimizer,
@@ -155,13 +153,12 @@ def train_step(z,
                generator=True,
                encoder=True):
     resized_image, label, textRatio, imgRatio, visualfea, textualfea = \
-    dataset.next()
+        dataset.next()
     return train_func(z, resized_image, label, textRatio, imgRatio, visualfea,
                       textualfea, is_training, discriminator, generator,
                       encoder)
 
 
-# @tf.function
 def train_func(z,
                resized_image,
                label,
@@ -173,7 +170,6 @@ def train_func(z,
                discriminator=True,
                generator=True,
                encoder=True):
-
     with tf.GradientTape() as disc_tape, tf.GradientTape(
     ) as gen_tape, tf.GradientTape() as encoder_tape:
         z_mean, z_log_sigma_sq, E, G, G_recon, D_real, D_fake = layoutnet(
@@ -223,7 +219,7 @@ def train_func(z,
         return disc_loss, gen_loss, encod_loss
 
 
-def sample():
+def sample(step):
     layout_path = './sample/layout'
     img_fea_path = './sample/visfea'
     txt_fea_path = './sample/texfea'
@@ -249,19 +245,17 @@ def sample():
         rgb = np.array(img).reshape(1, 64, 64, 3)
         rgb = rgb.astype(np.float32) * (1. / 127.5) - 1.
         test_layout = np.concatenate(
-            (test_layout, rgb), axis=0) if (i > 0 and test_layout) else rgb
+            (test_layout, rgb), axis=0) if i > 0 else rgb
 
         img_fea = np.load(img_fea_name)
         img_fea = img_fea.reshape(1, 14, 14, 512)
         test_img_fea = np.concatenate(
-            (test_img_fea,
-             img_fea), axis=0) if (i > 0 and test_img_fea) else img_fea
+            (test_img_fea, img_fea), axis=0) if i > 0 else img_fea
 
         txt_fea = np.load(txt_fea_name)
         txt_fea = txt_fea.reshape((1, 300))
         test_txt_fea = np.concatenate(
-            (test_txt_fea,
-             txt_fea), axis=0) if (i > 0 and test_txt_fea) else txt_fea
+            (test_txt_fea, txt_fea), axis=0) if i > 0 else txt_fea
 
         convar = np.load(sem_vec_name)
         category_input = np.eye(6)[int(convar[0, 0])].reshape([1, 6])
@@ -272,21 +266,27 @@ def sample():
             [category_input, text_ratio_input, img_ratio_input], 1)
         sem_vec = sem_vec.astype(np.float32)
         test_sem_vec = np.concatenate(
-            (test_sem_vec,
-             sem_vec), axis=0) if (i > 0 and test_sem_vec) else sem_vec
+            (test_sem_vec, sem_vec), axis=0) if i > 0 else sem_vec
 
     # start sampleing
 
     random_z_val = np.load('./sample/noiseVector_128.npy')
-    z_mean, z_log_sigma_sq, E, G, G_recon, D_real, D_fake = layoutnet(
-        x=test_layout,
-        y=test_sem_vec,
-        tr=test_ratio_input,
-        ir=img_ratio_input,
-        img=img_fea,
-        tex=txt_fea,
-        z=random_z_val,
-        is_training=False)
+    test_sem_vec = layoutnet.embeddingSemvec(test_sem_vec, is_training=False)
+    test_img_fea = layoutnet.embeddingImg(test_img_fea, is_training=False)
+    test_txt_fea = layoutnet.embeddingTxt(test_txt_fea, is_training=False)
+    test_label = layoutnet.embeddingFusion(test_sem_vec,
+                                           test_img_fea,
+                                           test_txt_fea,
+                                           is_training=False)
+    test_dis_label = tf.reshape(test_label,
+                                shape=[-1, 1, 1, config.latent_dim]) * tf.ones(
+                                    [128, 4, 4, config.latent_dim])
+    test_mean, test_log_sigma_sq = layoutnet.encoder(test_layout,
+                                                     is_training=False,
+                                                     y=test_dis_label)
+    E_input = test_mean + tf.exp(test_log_sigma_sq) * random_z_val
+    G = layoutnet.generator(E_input, is_training=False, y=test_label)
+    G = (G + 1.) / 2.
 
     im_name = os.path.join(config.sampledir, 'sample_%d.jpg' % (step + 1))
     h, w = G.shape[1], G.shape[2]
@@ -295,7 +295,8 @@ def sample():
         i = idx % 8
         j = idx // 8
         merge_img[j * h:j * h + h, i * w:i * w + w, :] = image
-    scipy.misc.imsave(im_name, merge_img)
+    img = Image.fromarray(np.uint8(merge_img * 255))
+    img.save(im_name)
 
 
 def train():
@@ -342,7 +343,7 @@ def train():
             checkpoint.save(file_prefix=checkpoint_prefix)
 
             # get and save samples
-            sample()
+            sample(step)
 
 
 train()
