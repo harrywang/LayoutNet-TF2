@@ -129,7 +129,7 @@ class Gen(keras.Model):
                                 activation=activation,
                                 kernel_initializer=initializer)
         self.reshape = Reshape((4, 4, 512))
-        self.bn = BatchNormalization()
+        self.bn_0 = BatchNormalization()
 
         self.conv_tp1 = Conv2DTranspose(256,
                                         kernel_size=kernel_size,
@@ -137,18 +137,21 @@ class Gen(keras.Model):
                                         padding=padding,
                                         activation=activation,
                                         kernel_initializer=initializer)
+        self.bn_1 = BatchNormalization()
         self.conv_tp2 = Conv2DTranspose(128,
                                         kernel_size=kernel_size,
                                         strides=strides,
                                         padding=padding,
                                         activation=activation,
                                         kernel_initializer=initializer)
+        self.bn_2 = BatchNormalization()
         self.conv_tp3 = Conv2DTranspose(64,
                                         kernel_size=kernel_size,
                                         strides=strides,
                                         padding=padding,
                                         activation=activation,
                                         kernel_initializer=initializer)
+        self.bn_3 = BatchNormalization()
         self.conv_tp4 = Conv2DTranspose(3,
                                         kernel_size=kernel_size,
                                         strides=strides,
@@ -163,11 +166,17 @@ class Gen(keras.Model):
             inputs = z
         x = self.projection(inputs)
         x = self.reshape(x)
-        x = self.bn(x)
+        x = self.bn_0(x)
 
         x = self.conv_tp1(x)
+        x = self.bn_1(x)
+
         x = self.conv_tp2(x)
+        x = self.bn_2(x)
+
         x = self.conv_tp3(x)
+        x = self.bn_3(x)
+        
         x = self.conv_tp4(x)
 
         return x
