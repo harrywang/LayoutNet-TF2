@@ -140,12 +140,6 @@ checkpoint = tf.train.Checkpoint(
 
 # define the training loop
 
-num_examples_to_generate = 16
-# from TF2.3 DCGAN documents:
-# We will reuse this seed overtime (so it's easier)
-# to visualize progress in the animated GIF)
-seed = tf.random.normal([num_examples_to_generate, config.z_dim])
-
 
 def train_step(z,
                is_training=True,
@@ -192,18 +186,22 @@ def train_func(z,
                                   z_mean=z_mean,
                                   G_recon=G_recon)
 
+        discriminator_variables = layoutnet.discriminator.trainable_variables
+        generator_variables = layoutnet.generator.trainable_variables
+        encoder_variables = layoutnet.encoder.trainable_variables + \
+                            layoutnet.embeddingImg.trainable_variables + \
+                            layoutnet.embeddingTxt.trainable_variables + \
+                            layoutnet.embeddingSemvec.trainable_variables + \
+                            layoutnet.embeddingFusion.trainable_variables
+
         gradients_of_discriminator = disc_tape.gradient(
-            disc_loss, layoutnet.discriminator.trainable_variables)
-        gradients_of_generator = gen_tape.gradient(
-            gen_loss, layoutnet.generator.trainable_variables)
-        gradients_of_encoder = encoder_tape.gradient(
-            encod_loss, layoutnet.encoder.trainable_variables)
+            disc_loss, discriminator_variables)
+        gradients_of_generator = gen_tape.gradient(gen_loss,
+                                                   generator_variables)
+        gradients_of_encoder = encoder_tape.gradient(encod_loss,
+                                                     encoder_variables)
 
         if is_training:
-            discriminator_variables = layoutnet.discriminator.trainable_variables
-            generator_variables = layoutnet.generator.trainable_variables
-            encoder_variables = layoutnet.encoder.trainable_variables
-
             if discriminator:
                 discriminator_optimizer.apply_gradients(
                     zip(gradients_of_discriminator, discriminator_variables))
