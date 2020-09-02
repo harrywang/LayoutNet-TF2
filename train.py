@@ -148,22 +148,7 @@ def train_step(z,
                encoder=True):
     resized_image, label, textRatio, imgRatio, visualfea, textualfea = \
         dataset.next()
-    return train_func(z, resized_image, label, textRatio, imgRatio, visualfea,
-                      textualfea, is_training, discriminator, generator,
-                      encoder)
 
-
-def train_func(z,
-               resized_image,
-               label,
-               textRatio,
-               imgRatio,
-               visualfea,
-               textualfea,
-               is_training=True,
-               discriminator=True,
-               generator=True,
-               encoder=True):
     with tf.GradientTape() as disc_tape, tf.GradientTape(
     ) as gen_tape, tf.GradientTape() as encoder_tape:
         z_mean, z_log_sigma_sq, E, G, G_recon, D_real, D_fake = layoutnet(
@@ -186,35 +171,33 @@ def train_func(z,
                                   z_mean=z_mean,
                                   G_recon=G_recon)
 
-        discriminator_variables = layoutnet.discriminator.trainable_variables
-        generator_variables = layoutnet.generator.trainable_variables
-        encoder_variables = layoutnet.encoder.trainable_variables + \
-                            layoutnet.embeddingImg.trainable_variables + \
-                            layoutnet.embeddingTxt.trainable_variables + \
-                            layoutnet.embeddingSemvec.trainable_variables + \
-                            layoutnet.embeddingFusion.trainable_variables
+    discriminator_variables = layoutnet.discriminator.trainable_variables
+    generator_variables = layoutnet.generator.trainable_variables
+    encoder_variables = layoutnet.encoder.trainable_variables + \
+                        layoutnet.embeddingImg.trainable_variables + \
+                        layoutnet.embeddingTxt.trainable_variables + \
+                        layoutnet.embeddingSemvec.trainable_variables + \
+                        layoutnet.embeddingFusion.trainable_variables
 
-        gradients_of_discriminator = disc_tape.gradient(
-            disc_loss, discriminator_variables)
-        gradients_of_generator = gen_tape.gradient(gen_loss,
-                                                   generator_variables)
-        gradients_of_encoder = encoder_tape.gradient(encod_loss,
-                                                     encoder_variables)
+    gradients_of_discriminator = disc_tape.gradient(disc_loss,
+                                                    discriminator_variables)
+    gradients_of_generator = gen_tape.gradient(gen_loss, generator_variables)
+    gradients_of_encoder = encoder_tape.gradient(encod_loss, encoder_variables)
 
-        if is_training:
-            if discriminator:
-                discriminator_optimizer.apply_gradients(
-                    zip(gradients_of_discriminator, discriminator_variables))
+    if is_training:
+        if discriminator:
+            discriminator_optimizer.apply_gradients(
+                zip(gradients_of_discriminator, discriminator_variables))
 
-            if generator:
-                generator_optimizer.apply_gradients(
-                    zip(gradients_of_generator, generator_variables))
+        if generator:
+            generator_optimizer.apply_gradients(
+                zip(gradients_of_generator, generator_variables))
 
-            if encoder:
-                encoder_optimizer.apply_gradients(
-                    zip(gradients_of_encoder, encoder_variables))
+        if encoder:
+            encoder_optimizer.apply_gradients(
+                zip(gradients_of_encoder, encoder_variables))
 
-        return disc_loss, gen_loss, encod_loss
+    return disc_loss, gen_loss, encod_loss
 
 
 def sample(step):
@@ -322,9 +305,12 @@ def train():
                                                      generator=False,
                                                      encoder=True)
 
-        # train all
+        # train gen and Encoder
         while disc_loss < 1.:
-            disc_loss, gen_loss, encod_loss = train_step(z)
+            disc_loss, gen_loss, encod_loss = train_step(z,
+                                                         discriminator=False,
+                                                         generator=True,
+                                                         encoder=True)
 
         t2 = time.time()
 
