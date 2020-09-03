@@ -164,10 +164,10 @@ def train_func(z,
         gradients_of_discriminator = disc_tape.gradient(
             disc_loss, discriminator_variables)
         gradients_of_generator = gen_tape.gradient(gen_loss,
-                                                    generator_variables)
+                                                   generator_variables)
         gradients_of_encoder = encoder_tape.gradient(encod_loss,
-                                                        encoder_variables)
-    
+                                                     encoder_variables)
+
         if discriminator:
             discriminator_optimizer.apply_gradients(
                 zip(gradients_of_discriminator, discriminator_variables))
