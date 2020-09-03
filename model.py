@@ -183,16 +183,16 @@ class Gen(keras.Model):
             inputs = z
         x = self.projection(inputs)
         x = self.reshape(x)
-        x = self.bn_0(x)
+        x = self.bn_0(x, is_training)
 
         x = self.conv_tp1(x)
-        x = self.bn_1(x)
+        x = self.bn_1(x, is_training)
 
         x = self.conv_tp2(x)
-        x = self.bn_2(x)
+        x = self.bn_2(x, is_training)
 
         x = self.conv_tp3(x)
-        x = self.bn_3(x)
+        x = self.bn_3(x, is_training)
 
         x = self.conv_tp4(x)
 
@@ -262,13 +262,13 @@ class Disc(keras.Model):
 
         x = self.conv_0(x)
         x = self.conv_1(x)
-        x = self.bn_1(x)
+        x = self.bn_1(x, is_training)
 
         x = self.conv_2(x)
-        x = self.bn_2(x)
+        x = self.bn_2(x, is_training)
 
         x = self.conv_3(x)
-        x = self.bn_3(x)
+        x = self.bn_3(x, is_training)
 
         x = self.conv_4(x)
 
@@ -343,13 +343,13 @@ class Encoder(keras.Model):
         x = self.conv_0(inputs)
 
         x = self.conv_1(x)
-        x = self.bn_1(x)
+        x = self.bn_1(x, is_training)
 
         x = self.conv_2(x)
-        x = self.bn_2(x)
+        x = self.bn_2(x, is_training)
 
         x = self.conv_3(x)
-        x = self.bn_3(x)
+        x = self.bn_3(x, is_training)
 
         if y is not None:
             x = tf.concat([x, y], 3)
