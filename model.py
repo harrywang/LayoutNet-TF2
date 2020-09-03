@@ -176,7 +176,7 @@ class Gen(keras.Model):
 
         x = self.conv_tp3(x)
         x = self.bn_3(x)
-        
+
         x = self.conv_tp4(x)
 
         return x

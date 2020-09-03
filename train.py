@@ -5,62 +5,11 @@ import numpy as np
 import tensorflow as tf
 from model import *
 import config
+from datetime import datetime
+from dataset import Dataset
 
-
-# decode function for dataset
-def _decode_tfrecords(example_string):
-    features = tf.io.parse_single_example(example_string,
-                                          features={
-                                              "label":
-                                              tf.io.FixedLenFeature([],
-                                                                    tf.int64),
-                                              "textRatio":
-                                              tf.io.FixedLenFeature([],
-                                                                    tf.int64),
-                                              "imgRatio":
-                                              tf.io.FixedLenFeature([],
-                                                                    tf.int64),
-                                              'visualfea':
-                                              tf.io.FixedLenFeature([],
-                                                                    tf.string),
-                                              'textualfea':
-                                              tf.io.FixedLenFeature([],
-                                                                    tf.string),
-                                              "img_raw":
-                                              tf.io.FixedLenFeature([],
-                                                                    tf.string)
-                                          })
-
-    image = tf.io.decode_raw(features['img_raw'], tf.uint8)
-    image = tf.reshape(image, [60, 45, 3])
-    image = tf.cast(image, tf.float32)
-
-    resized_image = tf.image.resize_with_crop_or_pad(image, 64, 64)
-    resized_image = resized_image / 127.5 - 1.
-
-    label = tf.cast(features['label'], tf.int32)
-
-    textRatio = tf.cast(features['textRatio'], tf.int32)
-    imgRatio = tf.cast(features['imgRatio'], tf.int32)
-
-    visualfea = tf.io.decode_raw(features['visualfea'], tf.float32)
-    visualfea = tf.reshape(visualfea, [14, 14, 512])
-
-    textualfea = tf.io.decode_raw(features['textualfea'], tf.float32)
-    textualfea = tf.reshape(textualfea, [300])
-
-    return resized_image, label, textRatio, imgRatio, visualfea, textualfea
-
-
-# prepare dataset
-dataset = tf.data.TFRecordDataset(config.filenamequeue)
-dataset = dataset.map(_decode_tfrecords)
-
-# TODO: change the buffer_size
-dataset = dataset.shuffle(buffer_size=1024, reshuffle_each_iteration=True)
-dataset = dataset.repeat()
-dataset = dataset.batch(batch_size=config.batch_size)
-dataset = dataset.as_numpy_iterator()
+# load dataset
+dataset = Dataset()
 
 # create model
 layoutnet = LayoutNet(config)
@@ -140,6 +89,11 @@ checkpoint = tf.train.Checkpoint(
 
 # define the training loop
 
+# Set up logging.
+stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+logdir = 'logs/func/%s' % stamp
+writer = tf.summary.create_file_writer(logdir)
+
 
 def train_step(z,
                is_training=True,
@@ -148,6 +102,33 @@ def train_step(z,
                encoder=True):
     resized_image, label, textRatio, imgRatio, visualfea, textualfea = \
         dataset.next()
+
+    # tf.summary.trace_on(graph=True, profiler=True)
+    disc_loss, gen_loss, encod_loss = train_func(z, resized_image, label,
+                                                 textRatio, imgRatio,
+                                                 visualfea, textualfea,
+                                                 is_training, discriminator,
+                                                 generator, encoder)
+    # with writer.as_default():
+    #     tf.summary.trace_export(name="my_func_trace",
+    #                             step=0,
+    #                             profiler_outdir=logdir)
+
+    return disc_loss, gen_loss, encod_loss
+
+
+# @tf.function
+def train_func(z,
+               resized_image,
+               label,
+               textRatio,
+               imgRatio,
+               visualfea,
+               textualfea,
+               is_training=True,
+               discriminator=True,
+               generator=True,
+               encoder=True):
 
     with tf.GradientTape() as disc_tape, tf.GradientTape(
     ) as gen_tape, tf.GradientTape() as encoder_tape:
@@ -171,20 +152,22 @@ def train_step(z,
                                   z_mean=z_mean,
                                   G_recon=G_recon)
 
-    discriminator_variables = layoutnet.discriminator.trainable_variables
-    generator_variables = layoutnet.generator.trainable_variables
-    encoder_variables = layoutnet.encoder.trainable_variables + \
-                        layoutnet.embeddingImg.trainable_variables + \
-                        layoutnet.embeddingTxt.trainable_variables + \
-                        layoutnet.embeddingSemvec.trainable_variables + \
-                        layoutnet.embeddingFusion.trainable_variables
-
-    gradients_of_discriminator = disc_tape.gradient(disc_loss,
-                                                    discriminator_variables)
-    gradients_of_generator = gen_tape.gradient(gen_loss, generator_variables)
-    gradients_of_encoder = encoder_tape.gradient(encod_loss, encoder_variables)
-
     if is_training:
+        discriminator_variables = layoutnet.discriminator.trainable_variables
+        generator_variables = layoutnet.generator.trainable_variables
+        encoder_variables = layoutnet.encoder.trainable_variables + \
+                            layoutnet.embeddingImg.trainable_variables + \
+                            layoutnet.embeddingTxt.trainable_variables + \
+                            layoutnet.embeddingSemvec.trainable_variables + \
+                            layoutnet.embeddingFusion.trainable_variables
+
+        gradients_of_discriminator = disc_tape.gradient(
+            disc_loss, discriminator_variables)
+        gradients_of_generator = gen_tape.gradient(gen_loss,
+                                                    generator_variables)
+        gradients_of_encoder = encoder_tape.gradient(encod_loss,
+                                                        encoder_variables)
+    
         if discriminator:
             discriminator_optimizer.apply_gradients(
                 zip(gradients_of_discriminator, discriminator_variables))
@@ -200,6 +183,7 @@ def train_step(z,
     return disc_loss, gen_loss, encod_loss
 
 
+# define sampling function
 def sample(step):
     layout_path = './sample/layout'
     img_fea_path = './sample/visfea'
