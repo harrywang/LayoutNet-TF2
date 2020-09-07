@@ -11,20 +11,20 @@ class EmbeddingSemvec(keras.Model):
         self.cat_fc = Dense(48,
                             activation=activation,
                             kernel_initializer=initializer,
-                            use_bias=False)
+                            use_bias=True)
         self.txt_fc = Dense(48,
                             activation=activation,
                             kernel_initializer=initializer,
-                            use_bias=False)
+                            use_bias=True)
         self.img_fc = Dense(48,
                             activation=activation,
                             kernel_initializer=initializer,
-                            use_bias=False)
+                            use_bias=True)
 
         self.fc = Dense(32,
                         activation=activation,
                         kernel_initializer=initializer,
-                        use_bias=False)
+                        use_bias=True)
 
     def call(self, inputs, is_training=None):
         category = tf.concat([
@@ -61,15 +61,15 @@ class EmbeddingImg(keras.Model):
         self.img_fc1 = Dense(512,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=False)
+                             use_bias=True)
         self.img_fc2 = Dense(256,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=False)
+                             use_bias=True)
         self.img_fc3 = Dense(128,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=False)
+                             use_bias=True)
 
     def call(self, inputs, is_training=None):
         x = tf.reduce_mean(inputs, [1, 2])
@@ -88,15 +88,15 @@ class EmbeddingTxt(keras.Model):
         self.txt_fc1 = Dense(256,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=False)
+                             use_bias=True)
         self.txt_fc2 = Dense(256,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=False)
+                             use_bias=True)
         self.txt_fc3 = Dense(128,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=False)
+                             use_bias=True)
 
     def call(self, inputs, is_training=None):
         x = self.txt_fc1(inputs)
@@ -114,11 +114,11 @@ class EmbeddingFusion(keras.Model):
         self.fusion_fc1 = Dense(256,
                                 activation=activation,
                                 kernel_initializer=initializer,
-                                use_bias=False)
+                                use_bias=True)
         self.fusion_fc2 = Dense(128,
                                 activation=activation,
                                 kernel_initializer=initializer,
-                                use_bias=False)
+                                use_bias=True)
 
     def call(self, input1, input2, input3, is_training=None):
         inputs = tf.concat([input1, input2, input3], 1)
@@ -140,7 +140,7 @@ class Gen(keras.Model):
         self.projection = Dense(4 * 4 * 512,
                                 activation=activation,
                                 kernel_initializer=initializer,
-                                use_bias=False)
+                                use_bias=True)
         self.reshape = Reshape((4, 4, 512))
         self.bn_0 = BatchNormalization(epsilon=1e-5)
 
@@ -252,7 +252,7 @@ class Disc(keras.Model):
         self.fc = Dense(1,
                         activation=tf.nn.tanh,
                         kernel_initializer=initializer,
-                        use_bias=False)
+                        use_bias=True)
 
     def call(self, inputs, is_training, y, z):
         if y is not None:
