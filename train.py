@@ -301,14 +301,14 @@ def train():
         if (step + 1) % config.summary_every_n_steps == 0:
             disc_loss, gen_loss, encod_loss = train_step(z, is_training=False)
             print("step {:5d},loss = (G: {:.8f}, D: {:.8f}), E: {:.8f}".format(
-                step, gen_loss, disc_loss, encod_loss))
+                step + 1, gen_loss, disc_loss, encod_loss))
 
         if (step + 1) % config.sample_every_n_steps == 0:
             eta = (t2 - t1) * (config.max_steps - step + 1)
             print("Finished {}/{} step, ETA:{:.2f}s".format(
                 step + 1, config.max_steps, eta))
 
-            checkpoint.save(file_prefix=checkpoint_prefix)
+            # checkpoint.save(file_prefix=checkpoint_prefix)
 
             # get and save samples
             sample(step)
