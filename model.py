@@ -11,20 +11,20 @@ class EmbeddingSemvec(keras.Model):
         self.cat_fc = Dense(48,
                             activation=activation,
                             kernel_initializer=initializer,
-                            use_bias=True)
+                            use_bias=False)
         self.txt_fc = Dense(48,
                             activation=activation,
                             kernel_initializer=initializer,
-                            use_bias=True)
+                            use_bias=False)
         self.img_fc = Dense(48,
                             activation=activation,
                             kernel_initializer=initializer,
-                            use_bias=True)
+                            use_bias=False)
 
         self.fc = Dense(32,
                         activation=activation,
                         kernel_initializer=initializer,
-                        use_bias=True)
+                        use_bias=False)
 
     def call(self, inputs, is_training=None):
         category = tf.concat([
@@ -61,15 +61,15 @@ class EmbeddingImg(keras.Model):
         self.img_fc1 = Dense(512,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
+                             use_bias=False)
         self.img_fc2 = Dense(256,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
+                             use_bias=False)
         self.img_fc3 = Dense(128,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
+                             use_bias=False)
 
     def call(self, inputs, is_training=None):
         x = tf.reduce_mean(inputs, [1, 2])
@@ -88,15 +88,15 @@ class EmbeddingTxt(keras.Model):
         self.txt_fc1 = Dense(256,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
+                             use_bias=False)
         self.txt_fc2 = Dense(256,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
+                             use_bias=False)
         self.txt_fc3 = Dense(128,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
+                             use_bias=False)
 
     def call(self, inputs, is_training=None):
         x = self.txt_fc1(inputs)
@@ -114,11 +114,11 @@ class EmbeddingFusion(keras.Model):
         self.fusion_fc1 = Dense(256,
                                 activation=activation,
                                 kernel_initializer=initializer,
-                                use_bias=True)
+                                use_bias=False)
         self.fusion_fc2 = Dense(128,
                                 activation=activation,
                                 kernel_initializer=initializer,
-                                use_bias=True)
+                                use_bias=False)
 
     def call(self, input1, input2, input3, is_training=None):
         inputs = tf.concat([input1, input2, input3], 1)
@@ -140,9 +140,9 @@ class Gen(keras.Model):
         self.projection = Dense(4 * 4 * 512,
                                 activation=activation,
                                 kernel_initializer=initializer,
-                                use_bias=True)
+                                use_bias=False)
         self.reshape = Reshape((4, 4, 512))
-        self.bn_0 = BatchNormalization()
+        self.bn_0 = BatchNormalization(epsilon=1e-5)
 
         self.conv_tp1 = Conv2DTranspose(256,
                                         kernel_size=kernel_size,
@@ -150,31 +150,31 @@ class Gen(keras.Model):
                                         padding=padding,
                                         activation=activation,
                                         kernel_initializer=initializer,
-                                        use_bias=True)
-        self.bn_1 = BatchNormalization()
+                                        use_bias=False)
+        self.bn_1 = BatchNormalization(epsilon=1e-5)
         self.conv_tp2 = Conv2DTranspose(128,
                                         kernel_size=kernel_size,
                                         strides=strides,
                                         padding=padding,
                                         activation=activation,
                                         kernel_initializer=initializer,
-                                        use_bias=True)
-        self.bn_2 = BatchNormalization()
+                                        use_bias=False)
+        self.bn_2 = BatchNormalization(epsilon=1e-5)
         self.conv_tp3 = Conv2DTranspose(64,
                                         kernel_size=kernel_size,
                                         strides=strides,
                                         padding=padding,
                                         activation=activation,
                                         kernel_initializer=initializer,
-                                        use_bias=True)
-        self.bn_3 = BatchNormalization()
+                                        use_bias=False)
+        self.bn_3 = BatchNormalization(epsilon=1e-5)
         self.conv_tp4 = Conv2DTranspose(3,
                                         kernel_size=kernel_size,
                                         strides=strides,
                                         padding=padding,
                                         activation=tf.nn.tanh,
                                         kernel_initializer=initializer,
-                                        use_bias=True)
+                                        use_bias=False)
 
     def call(self, z, is_training, y=None):
         if y is not None:
@@ -214,7 +214,7 @@ class Disc(keras.Model):
                              padding=padding,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
+                             use_bias=False)
 
         self.conv_1 = Conv2D(128,
                              kernel_size=kernel_size,
@@ -222,8 +222,8 @@ class Disc(keras.Model):
                              padding=padding,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
-        self.bn_1 = BatchNormalization()
+                             use_bias=False)
+        self.bn_1 = BatchNormalization(epsilon=1e-5)
 
         self.conv_2 = Conv2D(256,
                              kernel_size=kernel_size,
@@ -231,8 +231,8 @@ class Disc(keras.Model):
                              padding=padding,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
-        self.bn_2 = BatchNormalization()
+                             use_bias=False)
+        self.bn_2 = BatchNormalization(epsilon=1e-5)
 
         self.conv_3 = Conv2D(512,
                              kernel_size=kernel_size,
@@ -240,19 +240,19 @@ class Disc(keras.Model):
                              padding=padding,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
-        self.bn_3 = BatchNormalization()
+                             use_bias=False)
+        self.bn_3 = BatchNormalization(epsilon=1e-5)
 
         self.conv_4 = Conv2D(128,
                              kernel_size=4,
                              strides=(1, 1),
                              padding='valid',
-                             use_bias=True)
+                             use_bias=False)
 
         self.fc = Dense(1,
                         activation=tf.nn.tanh,
                         kernel_initializer=initializer,
-                        use_bias=True)
+                        use_bias=False)
 
     def call(self, inputs, is_training, y, z):
         if y is not None:
@@ -297,7 +297,7 @@ class Encoder(keras.Model):
                              padding=padding,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
+                             use_bias=False)
 
         self.conv_1 = Conv2D(128,
                              kernel_size=kernel_size,
@@ -305,8 +305,8 @@ class Encoder(keras.Model):
                              padding=padding,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
-        self.bn_1 = BatchNormalization()
+                             use_bias=False)
+        self.bn_1 = BatchNormalization(epsilon=1e-5)
 
         self.conv_2 = Conv2D(256,
                              kernel_size=kernel_size,
@@ -314,8 +314,8 @@ class Encoder(keras.Model):
                              padding=padding,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
-        self.bn_2 = BatchNormalization()
+                             use_bias=False)
+        self.bn_2 = BatchNormalization(epsilon=1e-5)
 
         self.conv_3 = Conv2D(512,
                              kernel_size=kernel_size,
@@ -323,21 +323,21 @@ class Encoder(keras.Model):
                              padding=padding,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=True)
-        self.bn_3 = BatchNormalization()
+                             use_bias=False)
+        self.bn_3 = BatchNormalization(epsilon=1e-5)
 
         self.conv_4_1 = Conv2D(128,
                                kernel_size=4,
                                strides=(1, 1),
                                padding='valid',
                                activation=None,
-                               use_bias=True)
+                               use_bias=False)
         self.conv_4_2 = Conv2D(128,
                                kernel_size=4,
                                strides=(1, 1),
                                padding='valid',
                                activation=None,
-                               use_bias=True)
+                               use_bias=False)
 
     def call(self, inputs, is_training, y=None):
         x = self.conv_0(inputs)
