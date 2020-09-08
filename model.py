@@ -6,7 +6,7 @@ from tensorflow.keras.layers import *
 class EmbeddingSemvec(keras.Model):
     def __init__(self):
         super(EmbeddingSemvec, self).__init__()
-        initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
+        initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
         activation = tf.nn.relu
         self.cat_fc = Dense(48,
                             activation=activation,
@@ -56,7 +56,7 @@ class EmbeddingSemvec(keras.Model):
 class EmbeddingImg(keras.Model):
     def __init__(self):
         super(EmbeddingImg, self).__init__()
-        initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
+        initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
         activation = tf.nn.relu
         self.img_fc1 = Dense(512,
                              activation=activation,
@@ -83,7 +83,7 @@ class EmbeddingImg(keras.Model):
 class EmbeddingTxt(keras.Model):
     def __init__(self):
         super(EmbeddingTxt, self).__init__()
-        initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
+        initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
         activation = tf.nn.relu
         self.txt_fc1 = Dense(256,
                              activation=activation,
@@ -109,7 +109,7 @@ class EmbeddingTxt(keras.Model):
 class EmbeddingFusion(keras.Model):
     def __init__(self):
         super(EmbeddingFusion, self).__init__()
-        initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
+        initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
         activation = tf.nn.relu
         self.fusion_fc1 = Dense(256,
                                 activation=activation,
@@ -131,7 +131,7 @@ class EmbeddingFusion(keras.Model):
 class Gen(keras.Model):
     def __init__(self):
         super(Gen, self).__init__()
-        initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
+        initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
         activation = tf.nn.relu
         kernel_size = 5
         strides = (2, 2)
@@ -202,7 +202,7 @@ class Gen(keras.Model):
 class Disc(keras.Model):
     def __init__(self):
         super(Disc, self).__init__()
-        initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
+        initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
         activation = tf.nn.leaky_relu
         kernel_size = 5
         strides = (2, 2)
@@ -250,7 +250,7 @@ class Disc(keras.Model):
                              use_bias=False)
 
         self.fc = Dense(1,
-                        activation=tf.nn.tanh,
+                        activation=activation,
                         kernel_initializer=initializer,
                         use_bias=True)
 
@@ -285,7 +285,7 @@ class Disc(keras.Model):
 class Encoder(keras.Model):
     def __init__(self):
         super(Encoder, self).__init__()
-        initializer = tf.keras.initializers.truncated_normal(stddev=0.02)
+        initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
         activation = tf.nn.leaky_relu
         kernel_size = 5
         strides = (2, 2)
@@ -297,7 +297,7 @@ class Encoder(keras.Model):
                              padding=padding,
                              activation=activation,
                              kernel_initializer=initializer,
-                             use_bias=False)
+                             use_bias=True)
 
         self.conv_1 = Conv2D(128,
                              kernel_size=kernel_size,
@@ -331,13 +331,13 @@ class Encoder(keras.Model):
                                strides=(1, 1),
                                padding='valid',
                                activation=None,
-                               use_bias=False)
+                               use_bias=True)
         self.conv_4_2 = Conv2D(128,
                                kernel_size=4,
                                strides=(1, 1),
                                padding='valid',
                                activation=None,
-                               use_bias=False)
+                               use_bias=True)
 
     def call(self, inputs, is_training, y=None):
         x = self.conv_0(inputs)

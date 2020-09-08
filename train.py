@@ -161,22 +161,21 @@ def train_func(z,
                             layoutnet.embeddingSemvec.trainable_variables + \
                             layoutnet.embeddingFusion.trainable_variables
 
-        gradients_of_discriminator = disc_tape.gradient(
-            disc_loss, discriminator_variables)
-        gradients_of_generator = gen_tape.gradient(gen_loss,
-                                                   generator_variables)
-        gradients_of_encoder = encoder_tape.gradient(encod_loss,
-                                                     encoder_variables)
-
         if discriminator:
+            gradients_of_discriminator = disc_tape.gradient(
+                disc_loss, discriminator_variables)
             discriminator_optimizer.apply_gradients(
                 zip(gradients_of_discriminator, discriminator_variables))
 
         if generator:
+            gradients_of_generator = gen_tape.gradient(gen_loss,
+                                                       generator_variables)
             generator_optimizer.apply_gradients(
                 zip(gradients_of_generator, generator_variables))
 
         if encoder:
+            gradients_of_encoder = encoder_tape.gradient(
+                encod_loss, encoder_variables)
             encoder_optimizer.apply_gradients(
                 zip(gradients_of_encoder, encoder_variables))
 
