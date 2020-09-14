@@ -7,6 +7,7 @@ from model import *
 import config
 from datetime import datetime
 from dataset import Dataset
+import argparse
 
 # load dataset
 dataset = Dataset()
@@ -316,4 +317,16 @@ def test():
 
 
 if __name__ == '__main__':
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--train', action='store_true')
+    parser.add_argument('--test', action='store_true')
+    result = parser.parse_args()
+
+    if result.train:
+        train()
+    elif result.test:
+        test()
+    else:
+        print('You must specify "test" or "train" to run.')
+
+    
