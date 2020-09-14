@@ -75,7 +75,7 @@ discriminator_optimizer = tf.keras.optimizers.Adam(learning_rate=config.lr,
 encoder_optimizer = tf.keras.optimizers.Adam(learning_rate=config.lr,
                                              beta_1=config.beta1)
 
-# define checkpoint saver
+# define checkpoint and manager
 
 checkpoint_prefix = os.path.join(config.checkpoint_dir,
                                  config.checkpoint_basename)
@@ -86,15 +86,12 @@ checkpoint = tf.train.Checkpoint(
     generator=layoutnet.generator,
     discriminator=layoutnet.discriminator,
     encoder=layoutnet.encoder)
+manager = tf.train.CheckpointManager(checkpoint,
+                                     config.checkpoint_dir,
+                                     max_to_keep=3)
+
 
 # define the training loop
-
-# Set up logging.
-stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-logdir = 'logs/func/%s' % stamp
-writer = tf.summary.create_file_writer(logdir)
-
-
 def train_step(z,
                is_training=True,
                discriminator=True,
@@ -103,21 +100,15 @@ def train_step(z,
     resized_image, label, textRatio, imgRatio, visualfea, textualfea = \
         dataset.next()
 
-    # tf.summary.trace_on(graph=True, profiler=True)
     disc_loss, gen_loss, encod_loss = train_func(z, resized_image, label,
                                                  textRatio, imgRatio,
                                                  visualfea, textualfea,
                                                  is_training, discriminator,
                                                  generator, encoder)
-    # with writer.as_default():
-    #     tf.summary.trace_export(name="my_func_trace",
-    #                             step=0,
-    #                             profiler_outdir=logdir)
 
     return disc_loss, gen_loss, encod_loss
 
 
-# @tf.function
 def train_func(z,
                resized_image,
                label,
@@ -182,14 +173,14 @@ def train_func(z,
     return disc_loss, gen_loss, encod_loss
 
 
-# define sampling function
-def sample(step):
-    layout_path = './sample/layout'
-    img_fea_path = './sample/visfea'
-    txt_fea_path = './sample/texfea'
-    sem_vec_path = './sample/semvec'
+# sampling function
+def sample(step, sample_dir='./sample'):
+    layout_path = os.path.join(sample_dir, 'layout')
+    img_fea_path = os.path.join(sample_dir, 'visfea')
+    txt_fea_path = os.path.join(sample_dir, 'texfea')
+    sem_vec_path = os.path.join(sample_dir, 'semvec')
 
-    f = open('./sample/imgSel_128.txt', 'r')
+    f = open(os.path.join(sample_dir, 'imgSel_128.txt'), 'r')
     name = f.read()
     name_list = name.split()
 
@@ -232,9 +223,10 @@ def sample(step):
         test_sem_vec = np.concatenate(
             (test_sem_vec, sem_vec), axis=0) if i > 0 else sem_vec
 
-    # start sampleing
+    # start sampling
 
-    random_z_val = np.load('./sample/noiseVector_128.npy')
+    # random_z_val = np.load('./sample/noiseVector_128.npy')
+    random_z_val = np.load(os.path.join(sample_dir, 'noiseVector_128.npy'))
     test_sem_vec = layoutnet.embeddingSemvec(test_sem_vec, is_training=False)
     test_img_fea = layoutnet.embeddingImg(test_img_fea, is_training=False)
     test_txt_fea = layoutnet.embeddingTxt(test_txt_fea, is_training=False)
@@ -307,10 +299,21 @@ def train():
             print("Finished {}/{} step, ETA:{:.2f}s".format(
                 step + 1, config.max_steps, eta))
 
-            # checkpoint.save(file_prefix=checkpoint_prefix)
+            manager.save()
 
             # get and save samples
             sample(step)
 
 
-train()
+def test():
+    print('Start testing...')
+
+    # restore latest checkpoint
+    checkpoint.restore(manager.latest_checkpoint)
+
+    # run sample function to generatre sample using checkpoint
+    sample(step=-1)
+
+
+if __name__ == '__main__':
+    train()
