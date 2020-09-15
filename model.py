@@ -3,6 +3,7 @@ from tensorflow import keras
 from tensorflow.keras.layers import *
 
 
+# Attribute encoder in the paper
 class EmbeddingSemvec(keras.Model):
     def __init__(self):
         super(EmbeddingSemvec, self).__init__()
@@ -27,22 +28,12 @@ class EmbeddingSemvec(keras.Model):
                         use_bias=True)
 
     def call(self, inputs, is_training=None):
-        category = tf.concat([
-            inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6],
-            inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6], inputs[:, 0:6],
-            inputs[:, 0:6], inputs[:, 0:6]
-        ], 1)
-        textratio = tf.concat([
-            inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13],
-            inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13], inputs[:, 6:13],
-            inputs[:, 6:13], inputs[:, 6:13]
-        ], 1)
-        imgratio = tf.concat([
-            inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23],
-            inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23],
-            inputs[:, 13:23], inputs[:, 13:23], inputs[:, 13:23], inputs[:,
-                                                                         13:23]
-        ], 1)
+        # according to the paper
+        # all attributes will be duplicated 10 times 
+        # to increase significance
+        category = tf.concat([inputs[:, 0:6]] * 10, 1)
+        textratio = tf.concat([inputs[:, 6:13]] * 10, 1)
+        imgratio = tf.concat([inputs[:, 13:23]] * 10, 1)
 
         cat = self.cat_fc(category)
         txt = self.txt_fc(textratio)
@@ -53,6 +44,7 @@ class EmbeddingSemvec(keras.Model):
         return self.fc(x)
 
 
+# Image encoder in the paper
 class EmbeddingImg(keras.Model):
     def __init__(self):
         super(EmbeddingImg, self).__init__()
@@ -80,6 +72,7 @@ class EmbeddingImg(keras.Model):
         return x
 
 
+# Text encoder in the paper
 class EmbeddingTxt(keras.Model):
     def __init__(self):
         super(EmbeddingTxt, self).__init__()
@@ -106,6 +99,7 @@ class EmbeddingTxt(keras.Model):
         return x
 
 
+# concatenate 3 kinds of features
 class EmbeddingFusion(keras.Model):
     def __init__(self):
         super(EmbeddingFusion, self).__init__()
@@ -152,6 +146,7 @@ class Gen(keras.Model):
                                         kernel_initializer=initializer,
                                         use_bias=False)
         self.bn_1 = BatchNormalization(epsilon=1e-5)
+
         self.conv_tp2 = Conv2DTranspose(128,
                                         kernel_size=kernel_size,
                                         strides=strides,
@@ -160,6 +155,7 @@ class Gen(keras.Model):
                                         kernel_initializer=initializer,
                                         use_bias=False)
         self.bn_2 = BatchNormalization(epsilon=1e-5)
+
         self.conv_tp3 = Conv2DTranspose(64,
                                         kernel_size=kernel_size,
                                         strides=strides,
@@ -168,6 +164,7 @@ class Gen(keras.Model):
                                         kernel_initializer=initializer,
                                         use_bias=False)
         self.bn_3 = BatchNormalization(epsilon=1e-5)
+
         self.conv_tp4 = Conv2DTranspose(3,
                                         kernel_size=kernel_size,
                                         strides=strides,
@@ -177,6 +174,7 @@ class Gen(keras.Model):
                                         use_bias=False)
 
     def call(self, z, is_training, y=None):
+        # y is the output of fusion layer
         if y is not None:
             inputs = tf.concat((z, y), 1)
         else:
@@ -378,8 +376,9 @@ class LayoutNet(keras.Model):
 
         self.config = config
 
-    def call(self, x, y, tr, ir, img, tex, z, is_training=True):
+    def generate(self, y, tr, ir, img, tex, z):
         config = self.config
+        is_training = False
 
         category = tf.one_hot(y, depth=config.y_dim)
         textratio = tf.one_hot(tr, depth=config.tr_dim)
@@ -393,6 +392,56 @@ class LayoutNet(keras.Model):
         y_label = self.embeddingFusion(var_label, img_fea, tex_fea,
                                        is_training)
 
+        G = self.generator(z, is_training, y=y_label)
+
+        return (G + 1.) / 2.
+
+        
+
+    def call(self, x, y, tr, ir, img, tex, z, is_training=True):
+        """[summary]
+
+        Args:
+            x ([type]): original layout annotation
+            y ([type]): layout category
+            tr ([type]): text ratio
+            ir ([type]): image ratio
+            img ([type]): image feature
+            tex ([type]): text feature
+            z ([type]): latent variable
+            is_training (bool, optional): Training flag. Defaults to True.
+
+        Returns:
+            z_mean
+            z_log_sigma_sq
+            E
+            G
+            G_recon
+            D_real
+            D_fake
+        """
+        config = self.config
+
+        category = tf.one_hot(y, depth=config.y_dim)
+        textratio = tf.one_hot(tr, depth=config.tr_dim)
+        imgratio = tf.one_hot(ir, depth=config.ir_dim)
+        x_labeltmp = tf.concat([category, textratio, imgratio], 1)
+
+        var_label = self.embeddingSemvec(x_labeltmp, is_training)
+        img_fea = self.embeddingImg(img, is_training)
+        tex_fea = self.embeddingTxt(tex, is_training)
+
+        y_label = self.embeddingFusion(var_label, img_fea, tex_fea,
+                                       is_training)
+        
+        # to apply y to encoder E and discriminator D
+        # first duplicate y along spatial dimensions
+        # to form a 60 × 45 × 128 feature map
+        
+        # NOTICE: 
+        # 60 * 45 is the size from paper
+        # but resizing is used when generating data
+        # so the size here is 64 * 64
         ydis_label = tf.reshape(
             y_label, shape=(-1, 1, 1, config.latent_dim)) * tf.ones(
                 [config.batch_size, 64, 64, config.latent_dim])
@@ -401,14 +450,19 @@ class LayoutNet(keras.Model):
             y_label, shape=(-1, 1, 1, config.latent_dim)) * tf.ones(
                 [config.batch_size, 4, 4, config.latent_dim])
 
+        # generate a random noise
         randomz = tf.random.normal([config.batch_size, config.z_dim])
 
+        # the final output of encoder is calculated by 2 outputs of encoder
         z_mean, z_log_sigma_sq = self.encoder(x,
                                               is_training,
                                               y=encoderdis_label)
         E = z_mean + tf.exp(z_log_sigma_sq) * randomz
 
+        # generate using random z
         G = self.generator(z, is_training, y=y_label)
+
+        # reconstruct result using the z calculated by encoder
         G_recon = self.generator(E, is_training, y=y_label)
 
         D_real = self.discriminator(x, is_training, y=ydis_label, z=z)
