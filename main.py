@@ -220,6 +220,8 @@ def sample(step, sample_dir='./sample'):
         # attribute feature
         sem_vec_name = os.path.join(sem_vec_path, file_name)
         convar = np.load(sem_vec_name)
+
+        # use np.eye(n) and feature value to generate one-hot encoding
         category_input = np.eye(6)[int(convar[0, 0])].reshape([1, 6])
         text_ratio_input = np.eye(7)[int(convar[0, 1])].reshape([1, 7])
         img_ratio_input = np.eye(10)[int(convar[0, 2])].reshape([1, 10])

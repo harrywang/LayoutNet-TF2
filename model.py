@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.layers import *
+import numpy as np
 
 
 # Attribute encoder in the paper
@@ -379,11 +380,10 @@ class LayoutNet(keras.Model):
     def generate(self, y, tr, ir, img, tex, z):
         config = self.config
         is_training = False
-
-        category = tf.one_hot(y, depth=config.y_dim)
-        textratio = tf.one_hot(tr, depth=config.tr_dim)
-        imgratio = tf.one_hot(ir, depth=config.ir_dim)
-        x_labeltmp = tf.concat([category, textratio, imgratio], 1)
+        category = np.eye(config.y_dim)[int(y)].reshape([1, config.y_dim])
+        textratio = np.eye(config.tr_dim)[int(tr)].reshape([1, config.tr_dim])
+        imgratio = np.eye(config.ir_dim)[int(ir)].reshape([1, config.ir_dim])
+        x_labeltmp = np.concatenate([category, textratio, imgratio], 1).astype(np.float32)
 
         var_label = self.embeddingSemvec(x_labeltmp, is_training)
         img_fea = self.embeddingImg(img, is_training)
@@ -404,8 +404,8 @@ class LayoutNet(keras.Model):
         Args:
             x ([type]): original layout annotation
             y ([type]): layout category
-            tr ([type]): text ratio
-            ir ([type]): image ratio
+            tr (int64): text ratio
+            ir (int64): image ratio
             img ([type]): image feature
             tex ([type]): text feature
             z ([type]): latent variable

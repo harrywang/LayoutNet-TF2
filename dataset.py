@@ -9,7 +9,7 @@ class Dataset:
         dataset = dataset.map(self._decode_tfrecords)
 
         # TODO: change the buffer_size
-        dataset = dataset.shuffle(buffer_size=4096,
+        dataset = dataset.shuffle(buffer_size=32,
                                   reshuffle_each_iteration=True)
         dataset = dataset.repeat()
         dataset = dataset.batch(batch_size=config.batch_size)
