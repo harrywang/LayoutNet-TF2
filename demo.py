@@ -7,41 +7,60 @@ import config
 from PIL import Image
 import matplotlib.pyplot as plt
 
-# define model
-layoutnet = LayoutNet(config)
 
-# restore from latest checkpoint
-layoutnet.load_weights('./checkpoints/ckpt-300')
+class LayoutNetDemo:
+    def __init__(self, checkpoint_path):
+        # define model
+        self.layoutnet = LayoutNet(config)
 
-# visual feature extract
-vis_fea = VisualFeatureExtract()
+        # restore from latest checkpoint
+        self.layoutnet.load_weights(checkpoint_path)
 
-# text feature extract
-txt_fea = TextFeatureExtract()
+        # visual feature extract
+        self.vis_fea = VisualFeatureExtract()
 
-# category, text_ratio and image ratio handler
-sem_vec = AttributeFeatureHandler()
+        # text feature extract
+        self.txt_fea = TextFeatureExtract()
+
+        # category, text_ratio and image ratio handler
+        self.sem_vec = AttributeFeatureHandler()
+
+    def generate(self, category, text_ratio, image_ratio, image_path,
+                 keywords_list, z):
+        # process user input
+        y, tr, ir = self.sem_vec.get(category=category,
+                                     text_ratio=text_ratio,
+                                     image_ratio=image_ratio)
+
+        # extract image feature
+        img_feature = self.vis_fea.extract(image_path)
+
+        # extract text feature according to keywords
+        txt_feature = self.txt_fea.extract(keywords_list)
+
+        # generate result
+        generated = self.layoutnet.generate(y, tr, ir, img_feature,
+                                            txt_feature, z)
+        generated = (generated + 1.) / 2.
+        image = generated[0]
+        image = Image.fromarray(np.uint8(image * 255))
+
+        return image
+
 
 if __name__ == '__main__':
-    # process user input
+    demo = LayoutNetDemo(checkpoint_path='./checkpoints/ckpt-300')
 
-    y, tr, ir = sem_vec.get(category='food', text_ratio=0.5, image_ratio=0.5)
-
-    print('Extracting Image Feature...')
-    img_feature = vis_fea.extract('./test.jpg')
-
-    print('Extracting Text Feature...')
-    txt_feature = txt_fea.extract(
-        ['Taste', 'wine', 'restaurant', 'fruit', 'market'])
+    category = 'food'
+    text_ratio = 0.5
+    image_ratio = 0.5
+    image_path = './test.jpg'
+    keywords_list = ['Taste', 'wine', 'restaurant', 'fruit', 'market']
 
     # generate random latent variable
     z = np.random.normal(0.0, 1.0, size=(1, config.z_dim)).astype(np.float32)
 
     # generate result
-    generated = layoutnet.generate(y, tr, ir, img_feature, txt_feature, z)
-    generated = (generated + 1.) / 2.
-
-    image = generated[0]
-
-    image = Image.fromarray(np.uint8(image * 255))
+    image = demo.generate(category, text_ratio, image_ratio, image_path,
+                          keywords_list, z)
     image.save('./demo.png')
