@@ -43,7 +43,9 @@ class LayoutNetDemo:
                                             txt_feature, z)
         generated = (generated + 1.) / 2.
         image = generated[0]
-        image = Image.fromarray(np.uint8(image * 255))
+
+        # return raw to postprocessing
+        # image = Image.fromarray(np.uint8(image * 255))
 
         return image
 
@@ -54,7 +56,7 @@ if __name__ == '__main__':
     category = 'food'
     text_ratio = 0.5
     image_ratio = 0.5
-    image_path = './test.jpg'
+    image_path = ['./test1.jpg', './test2.jpg']
     keywords_list = ['Taste', 'wine', 'restaurant', 'fruit', 'market']
 
     # generate random latent variable
