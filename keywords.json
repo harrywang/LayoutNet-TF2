@@ -1,0 +1,8 @@
+{
+    "fashion": ["woman", "love", "life", "friend", "style", "skin", "wear", "fashion", "dress", "top"],
+    "food": ["top", "salt", "stir", "heat", "place", "taste", "recipe", "dish", "cool", "season"],
+    "news": ["country", "life", "government", "woman", "man", "decade", "talk", "power", "state", "child"],
+    "science": ["study", "scientist", "life", "place", "earth", "researcher", "university", "decade", "science", "research"],
+    "travel": ["place", "life", "love", "visit", "house", "country", "garden", "view", "family", "top"],
+    "wedding": ["wedding", "guest", "love", "bride", "style", "couple", "ceremony", "dress", "venue", "family"]
+}
