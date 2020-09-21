@@ -7,6 +7,7 @@ z_dim = 128
 batch_size = 128
 lr = 0.0002
 beta1 = 0.5
+
 # configuration for the supervisor
 logdir = "./log"
 sampledir = "./example"
