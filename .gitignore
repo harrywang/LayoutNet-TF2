@@ -138,3 +138,5 @@ validation/
 log/
 example/
 checkpoints/
+
+.DS_Store
