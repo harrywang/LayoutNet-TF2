@@ -82,7 +82,7 @@ class AttributeFeatureHandler:
     # category:     int64 0-5
     # text ratio:   0.1 - 0.7  7 scale -> int 0-6
     # image ratio:  0.1 - 1.0 10 scale -> int 0-9
-    def __init__(self, keywords_path='./dataset/keywords.json'):
+    def __init__(self, keywords_path='./keywords.json'):
         # read category list from keywords.json
         f = open(keywords_path)
         category_json = json.load(f)

@@ -17,7 +17,51 @@ We have put demo and the whole training pipeline on Colab, you can click [here](
 
 ## Prepare Dataset
 
-Download `dataset`, `sample` and `checkpoints` from [here](https://drive.google.com/drive/folders/1-4kCVyJneBnACnaDgUGs8J1MMS6WavQT?usp=sharing). And place them in the repo's folder, the same level as `main.py`.
+Download the following files from [here](https://drive.google.com/drive/folders/1-4kCVyJneBnACnaDgUGs8J1MMS6WavQT?usp=sharing). And place them in the repo's folder, the same level as `main.py`.
+
+- `checkpoints` (~200M): this is the pre-trained LayoutGAN model 
+- `dataset` (~1G): the processed dataset in TFRecords format
+- `sample` (5.2M): the processed sample visual (visfea), text (texfea), semantic (semvec) features and some sample generation results 
+
+The folder structure should be:
+
+```
+├── README.md
+├── checkpoints
+│   ├── checkpoint
+│   ├── ckpt-300.data-00000-of-00001
+│   └── ckpt-300.index
+├── config.py
+├── dataset
+│   └── layout_1205.tfrecords
+├── dataset.py
+├── demo.py
+├── main.py
+├── model.py
+├── preprocessing.py
+├── requirements.txt
+└── sample
+    ├── imgSel_128.txt
+    ├── layout
+    ...
+```
+
+The path to the datasets are specified in `config.py`:
+
+```
+# configuration for the supervisor
+logdir = "./log"
+sampledir = "./example"
+max_steps = 30000
+sample_every_n_steps = 100
+summary_every_n_steps = 1
+save_model_secs = 120
+checkpoint_basename = "layout"
+checkpoint_dir = "./checkpoints"
+filenamequeue = "./dataset/layout_1205.tfrecords"
+min_after_dequeue = 5000
+num_threads = 4
+```
 
 ## Getting Started  
 
