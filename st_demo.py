@@ -11,13 +11,18 @@ import math
 @st.cache(allow_output_mutation=True)
 def init():
     demo = LayoutNetDemo(checkpoint_path='./checkpoints/ckpt-300')
-    return demo
+    
+    latent_z = []
+    for i in range(16):
+        latent_z.append(np.random.normal(0.0, 1.0, size=(1, config.z_dim)).astype(np.float32))
+    
+    return demo, latent_z
 
 
 def main():
     st.beta_set_page_config(page_title='LayoutNet', page_icon=None, layout='centered', initial_sidebar_state='auto')
 
-    demo = init()
+    demo, latent_z = init()
     
     st.set_option('deprecation.showfileUploaderEncoding', False)
     st.title('LayoutNet in TensorFlow2.3')
@@ -56,6 +61,8 @@ def main():
 
     number_of_results = st.sidebar.slider(label='Number of Results', min_value=1, max_value=16, step=1, value=5)
     
+    fix_z = st.sidebar.checkbox(label='Fix latent variable z', value=False)
+
     generate = st.sidebar.button(label='Generate')
 
     if generate:
@@ -67,7 +74,12 @@ def main():
         for i in range(number_of_results):
             row_idx = int(i / canva_col)
             col_idx = int(i % canva_col)
-            z = np.random.normal(0.0, 1.0, size=(1, config.z_dim)).astype(np.float32)
+            if fix_z:
+                z = latent_z[i]
+            else:
+                z = np.random.normal(0.0, 1.0, size=(1, config.z_dim)).astype(np.float32)
+
+            print(z)
             image_raw = demo.generate(category, txt_ratio, img_ratio, images_group, keywords, z)
 
             canva[row_idx * 64 : row_idx * 64 + 64, col_idx * 64 : col_idx * 64 + 64, :] = np.uint8(image_raw * 255)
