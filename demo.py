@@ -44,9 +44,6 @@ class LayoutNetDemo:
         generated = (generated + 1.) / 2.
         image = generated[0]
 
-        # return raw to postprocessing
-        # image = Image.fromarray(np.uint8(image * 255))
-
         return image
 
 
@@ -66,13 +63,27 @@ if __name__ == '__main__':
 
     # generate result
     print('generating demo 1')
+<<<<<<< HEAD
     image = demo.generate(category, text_ratio, image_ratio, image_path1,
                           keywords_list, z)
+=======
+    image_raw = demo.generate(category, text_ratio, image_ratio, image_path1,
+                              keywords_list, z)
+
+    image = Image.fromarray(np.uint8(image_raw * 255))
+>>>>>>> 47cdcde05df520c338fb899663494fb4c82ec0ce
     image.save('./demo/demo1.png')
 
     # generate result
     print('generating demo 2')
+<<<<<<< HEAD
     image = demo.generate(category, text_ratio, image_ratio, image_path2,
                           keywords_list, z)
     image.save('./demp/demo2.png')
     
+=======
+    image_raw = demo.generate(category, text_ratio, image_ratio, image_path2,
+                              keywords_list, z)
+    image = Image.fromarray(np.uint8(image_raw * 255))
+    image.save('./demo/demo2.png')
+>>>>>>> 47cdcde05df520c338fb899663494fb4c82ec0ce

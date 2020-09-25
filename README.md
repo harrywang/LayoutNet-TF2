@@ -67,7 +67,33 @@ num_threads = 4
 
 ### With Docker (Recommended when GPU ready, but Linux only)  
 
-> With Docker, only Nvidia driver is required, no need to configure CUDA and cuDNN.  
+> With Docker, only NVIDIA driver is required, no need to configure CUDA and cuDNN.  
+
+**TODO: run the whole pipeline firstly, and then write docs.**
+
+- Firstly, install `NVIDIA Container Toolkit` following the [official guidance](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker).  
+
+- Pull an image with `CUDA 10.1` and `cuDNN 7`, for example, you can pull `nvidia/cuda:10.1-cudnn7-devel` by  
+
+```shell
+docker pull nvidia/cuda:10.1-cudnn7-devel
+```
+
+- Run `nvidia-smi` to check if everything is right.  
+
+```shell
+docker run --rm --gpus all nvidia/cuda:10.1-cudnn7-devel nvidia-smi
+```
+
+- Run container and install requirements
+
+```shell
+docker run -it --gpus all  --volume ./:/data nvidia/cuda:10.1-cudnn7-devel /bin/bash
+
+# now you should in the container
+# and then install requirements
+pip install -r requirements.txt  
+```
 
 ### On Local Machine  
 
@@ -99,7 +125,7 @@ Now you can run demo with
 python demo.py
 ```
 
-Or run build-in test function to generate some samples of the LayoutNet.  
+Or run build-in test function to generate some samples.  
 
 ```shell
 python main.py --test
